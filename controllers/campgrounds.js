@@ -89,7 +89,11 @@ exports.createCampground = async (req, res, next) => {
   try {
 
     if (req.body.name) {
-      const existingCampground = await Campground.findOne({ name: req.body.name });
+      // const existingCampground = await Campground.findOne({ name: req.body.name });
+      const existingCampground = await Campground.findOne({ 
+        name: { $regex: new RegExp(`^${req.body.name}$`, 'i') } 
+      });
+
       if (existingCampground) {
         return res.status(400).json({ 
           success: false, 
