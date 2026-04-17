@@ -25,6 +25,10 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  birthdate: {
+    type: Date,
+    required:  [true, 'Please add a birthdate']
+  },
   password: {
     type:      String,
     required:  [true, 'Please add a password'],
