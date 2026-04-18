@@ -7,8 +7,8 @@ const connectDB  = require('../config/db');
 exports.register = async (req, res, next) => {
   await connectDB();
   try {
-    const { name, tel, email, password, role } = req.body;
-    const user = await User.create({ name, tel, email, password, role });
+    const { name, tel, email, password, role, birthdate } = req.body;
+    const user = await User.create({ name, tel, email, password, role, birthdate });
     sendTokenResponse(user, 200, res);
   } catch (err) {
     res.status(400).json({ success: false });
@@ -87,7 +87,8 @@ exports.updateDetails = async (req, res, next) => {
         const fieldsToUpdate = {
             name: req.body.name,
             email: req.body.email,
-            tel: req.body.tel
+            tel: req.body.tel,
+            birthdate: req.body.birthdate
         };
 
         const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
