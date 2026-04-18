@@ -89,7 +89,6 @@ exports.createCampground = async (req, res, next) => {
   try {
     if (req.body.name) {
       const checkName = req.body.name.trim();
-      
       const existingCampground = await Campground.findOne({ 
         name: { $regex: new RegExp(`^${checkName}$`, 'i') } 
       });
@@ -112,8 +111,16 @@ exports.createCampground = async (req, res, next) => {
         message: 'A campground with this name already exists. Please choose a unique name.' 
       });
     }
+
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages[0]
+      });
+    }
     
-    res.status(400).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: 'Invalid data submitted' });
   }
 };
 
