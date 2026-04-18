@@ -1,3 +1,5 @@
+const { setServers } = require("node:dns/promises");
+setServers(["1.1.1.1", "8.8.8.8"]);
 const app = require('./app');
 
 const PORT = process.env.PORT || 5000;
