@@ -31,10 +31,7 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors());
 app.use(cookieParser());
 app.use(mongoSanitize());
 app.use(helmet());
