@@ -31,10 +31,6 @@ const UserSchema = new mongoose.Schema({
     minlength: 6,
     select:    false  // Not returned in queries by default
   },
-  birthdate: {
-    type: Date, // เพิ่มฟิลด์ birthdate ตามที่คุณมีการเรียกใช้ใน controller
-    required: false
-  },
   resetPasswordToken:  String,
   resetPasswordExpire: Date,
   createdAt: {
