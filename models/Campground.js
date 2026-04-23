@@ -5,9 +5,13 @@ const CampgroundSchema = new mongoose.Schema(
     name: {
       type:      String,
       required:  [true, 'Please add a campground name'],
-      unique:    true,
       trim:      true,
       maxlength: [50, 'Name cannot be more than 50 characters']
+    },
+    price: {
+      type:    Number,
+      required: [true, 'Please add a price per night'],
+      min:      [0, 'Price must be a positive number']
     },
     picture: {
       type: String,

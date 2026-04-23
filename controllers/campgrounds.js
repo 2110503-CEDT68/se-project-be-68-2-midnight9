@@ -87,31 +87,10 @@ exports.getCampground = async (req, res, next) => {
 exports.createCampground = async (req, res, next) => {
   await connectDB();
   try {
-    if (req.body.name) {
-      const checkName = req.body.name.trim();
-      const existingCampground = await Campground.findOne({ 
-        name: { $regex: new RegExp(`^${checkName}$`, 'i') } 
-      });
-
-      if (existingCampground) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'A campground with this name already exists. Please choose a unique name.' 
-        });
-      }
-    }
-
     const campground = await Campground.create(req.body);
     res.status(201).json({ success: true, data: campground });
     
   } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'A campground with this name already exists. Please choose a unique name.' 
-      });
-    }
-
     if (err.name === 'ValidationError') {
       const messages = Object.values(err.errors).map(val => val.message);
       return res.status(400).json({
