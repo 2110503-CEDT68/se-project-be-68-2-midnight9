@@ -2,6 +2,21 @@ const Campground = require('../models/Campground');
 const connectDB  = require('../config/db');
 const Booking    = require('../models/Booking');
 
+const normalizePrice = (body = {}) => {
+  if (body.price === undefined) return body;
+
+  const normalizedPrice =
+    typeof body.price === 'number' ? body.price : Number(String(body.price).trim());
+
+  return {
+    ...body,
+    price: normalizedPrice
+  };
+};
+
+const isDuplicateCampgroundError = (err) =>
+  err && err.code === 11000 && err.keyPattern && err.keyPattern.name === 1;
+
 // @desc    Get all campgrounds
 // @route   GET /api/v1/campgrounds
 // @access  Public
@@ -87,7 +102,16 @@ exports.getCampground = async (req, res, next) => {
 exports.createCampground = async (req, res, next) => {
   await connectDB();
   try {
-    const campground = await Campground.create(req.body);
+    const payload = normalizePrice(req.body);
+
+    if (!Number.isFinite(payload.price) || payload.price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please add a valid price per night'
+      });
+    }
+
+    const campground = await Campground.create(payload);
     res.status(201).json({ success: true, data: campground });
     
   } catch (err) {
@@ -96,6 +120,13 @@ exports.createCampground = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: messages[0]
+      });
+    }
+
+    if (isDuplicateCampgroundError(err)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This campground already exists with the exact same details'
       });
     }
     
@@ -109,7 +140,16 @@ exports.createCampground = async (req, res, next) => {
 exports.updateCampground = async (req, res, next) => {
   await connectDB();
   try {
-    const campground = await Campground.findByIdAndUpdate(req.params.id, req.body, {
+    const payload = normalizePrice(req.body);
+
+    if (payload.price !== undefined && (!Number.isFinite(payload.price) || payload.price < 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please add a valid price per night'
+      });
+    }
+
+    const campground = await Campground.findByIdAndUpdate(req.params.id, payload, {
       new:           true,
       runValidators: true
     });
@@ -120,7 +160,22 @@ exports.updateCampground = async (req, res, next) => {
 
     res.status(200).json({ success: true, data: campground });
   } catch (err) {
-    res.status(400).json({ success: false });
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages[0]
+      });
+    }
+
+    if (isDuplicateCampgroundError(err)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This campground already exists with the exact same details'
+      });
+    }
+
+    res.status(400).json({ success: false, message: 'Invalid data submitted' });
   }
 };
 

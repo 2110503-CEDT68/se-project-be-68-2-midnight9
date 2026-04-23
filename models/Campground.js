@@ -49,6 +49,24 @@ const CampgroundSchema = new mongoose.Schema(
   }
 );
 
+CampgroundSchema.index(
+  {
+    name: 1,
+    price: 1,
+    picture: 1,
+    address: 1,
+    district: 1,
+    province: 1,
+    region: 1,
+    tel: 1,
+    postalcode: 1
+  },
+  {
+    unique: true,
+    name: 'unique_campground_all_fields'
+  }
+);
+
 // Reverse populate bookings when querying a campground
 CampgroundSchema.virtual('bookings', {
   ref:          'Booking',
