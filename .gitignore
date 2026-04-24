@@ -7,3 +7,6 @@ coverage/
 
 # ignore config file
 config/config.env
+
+
+coverage/
