@@ -191,8 +191,21 @@ exports.deleteCampground = async (req, res, next) => {
       return res.status(404).json({ success: false, message: `Campground not found with id of ${req.params.id}` });
     }
 
-    // Delete related bookings before removing the campground
-    await Booking.deleteMany({ campground: req.params.id });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const hasActiveOrUpcomingBookings = await Booking.exists({
+      campground: req.params.id,
+      checkOutDate: { $gte: today }
+    });
+
+    if (hasActiveOrUpcomingBookings) {
+      return res.status(409).json({
+        success: false,
+        message: 'This campground cannot be deleted while active or upcoming bookings exist.'
+      });
+    }
+
     await campground.deleteOne();
 
     res.status(200).json({ success: true, data: {} });
