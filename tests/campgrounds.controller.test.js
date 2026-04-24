@@ -7,7 +7,8 @@ jest.mock('../models/Campground', () => ({
   findByIdAndUpdate: jest.fn()
 }));
 jest.mock('../models/Booking', () => ({
-  exists: jest.fn()
+  countDocuments: jest.fn(),
+  deleteMany: jest.fn()
 }));
 
 const connectDB = require('../config/db');
@@ -299,7 +300,7 @@ describe('campgrounds controller', () => {
       expect(Campground.findByIdAndUpdate).toHaveBeenCalledWith(
         'cg-1',
         { name: 'Updated Camp' },
-        { new: true, runValidators: true }
+        { returnDocument: 'after', runValidators: true }
       );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: updated });
@@ -407,17 +408,19 @@ describe('campgrounds controller', () => {
     test('deletes campground successfully when there are no active or upcoming bookings', async () => {
       const deleteOne = jest.fn().mockResolvedValue(undefined);
       Campground.findById.mockResolvedValue({ _id: 'cg-1', deleteOne });
-      Booking.exists.mockResolvedValue(false);
+      Booking.countDocuments.mockResolvedValue(0);
+      Booking.deleteMany.mockResolvedValue(undefined);
 
       const req = { params: { id: 'cg-1' } };
       const res = createResponse();
 
       await campgroundsController.deleteCampground(req, res);
 
-      expect(Booking.exists).toHaveBeenCalledWith({
+      expect(Booking.countDocuments).toHaveBeenCalledWith({
         campground: 'cg-1',
         checkOutDate: { $gte: expect.any(Date) }
       });
+      expect(Booking.deleteMany).toHaveBeenCalledWith({ campground: 'cg-1' });
       expect(deleteOne).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: {} });
@@ -440,7 +443,7 @@ describe('campgrounds controller', () => {
 
     test('returns 409 when active or upcoming bookings exist', async () => {
       Campground.findById.mockResolvedValue({ _id: 'cg-1', deleteOne: jest.fn() });
-      Booking.exists.mockResolvedValue(true);
+      Booking.countDocuments.mockResolvedValue(2);
 
       const req = { params: { id: 'cg-1' } };
       const res = createResponse();
@@ -450,7 +453,7 @@ describe('campgrounds controller', () => {
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'This campground cannot be deleted while active or upcoming bookings exist.'
+        message: 'Cannot delete campground with 2 active or upcoming booking(s)'
       });
     });
 
