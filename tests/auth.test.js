@@ -130,9 +130,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         });
     });
 
-    // =========================
-    // GET ME
-    // =========================
+    //GET ME
     it('should get current user profile', async () => {
         const user = await User.create(sampleUser);
 
@@ -143,9 +141,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         expect(res.statusCode).toBe(200);
     });
 
-    // =========================
-    // LOGOUT
-    // =========================
+    //LOGOUT
     it('should logout and clear cookie', async () => {
         const res = await request(app).get('/api/v1/auth/logout');
 
@@ -153,9 +149,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         expect(res.headers['set-cookie'][0]).toMatch(/token=none/);
     });
 
-    // =========================
     // UPDATE DETAILS
-    // =========================
     describe('Update Details', () => {
 
         it('should update user successfully', async () => {
@@ -198,9 +192,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         });
     });
 
-    // =========================
     // UPDATE PASSWORD
-    // =========================
     describe('Update Password', () => {
 
         it('should update password successfully', async () => {
@@ -240,9 +232,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         });
     });
 
-    // =========================
     // ADMIN
-    // =========================
     describe('Admin', () => {
 
         it('should get all users', async () => {
@@ -289,9 +279,7 @@ describe('Auth Controller (100% Branch Coverage)', () => {
         });
     });
 
-    // =========================
     // MODEL BRANCH
-    // =========================
     it('should skip password hashing if not modified', async () => {
         const user = await User.create(sampleUser);
 
