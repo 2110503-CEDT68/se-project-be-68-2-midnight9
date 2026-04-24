@@ -15,7 +15,18 @@ const CampgroundSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      required: [true, 'Please add a URL for the campground picture']
+      required: [true, 'Please add a URL for the campground picture'],
+      validate: {
+        validator: (value) => {
+          try {
+            const url = new URL(value);
+            return url.protocol === 'http:' || url.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        },
+        message: 'Please add a valid picture URL'
+      }
     },
     address: {
       type:     String,
@@ -35,12 +46,20 @@ const CampgroundSchema = new mongoose.Schema(
     },
     tel: {
       type:     String,
-      required: [true, 'Please add a telephone number']
+      required: [true, 'Please add a telephone number'],
+      validate: {
+        validator: (value) => /^\d{9,10}$/.test(value),
+        message: 'Please add a valid Thai telephone number'
+      }
     },
     postalcode: {
       type:      String,
       required:  [true, 'Please add a postal code'],
-      maxlength: [5, 'Postal code cannot be more than 5 digits']
+      maxlength: [5, 'Postal code cannot be more than 5 digits'],
+      validate: {
+        validator: (value) => /^\d{5}$/.test(value),
+        message: 'Please add a valid postal code'
+      }
     },
   },
   {

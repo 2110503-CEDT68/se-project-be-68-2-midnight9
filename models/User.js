@@ -5,16 +5,24 @@ const jwt      = require('jsonwebtoken');
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please add a name']
+    required: [true, 'Please add a name'],
+    trim: true
   },
   tel: {
     type: String,
-    required: [true, 'Please add a telephone number']
+    required: [true, 'Please add a telephone number'],
+    trim: true,
+    validate: {
+      validator: (value) => /^\d{9,10}$/.test(value),
+      message: 'Please add a valid telephone number'
+    }
   },
   email: {
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
+    lowercase: true,
+    trim: true,
     match: [
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       'Please add a valid email'
@@ -33,6 +41,31 @@ const UserSchema = new mongoose.Schema({
   },
   resetPasswordToken:  String,
   resetPasswordExpire: Date,
+  birthDate: Date,
+  province: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  emergencyName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  emergencyPhone: {
+    type: String,
+    trim: true,
+    default: '',
+    validate: {
+      validator: (value) => !value || /^\d{9,10}$/.test(value),
+      message: 'Please add a valid emergency telephone number'
+    }
+  },
+  medicalConditions: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   createdAt: {
     type:    Date,
     default: Date.now
