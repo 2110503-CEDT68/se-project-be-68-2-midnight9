@@ -150,7 +150,7 @@ exports.updateCampground = async (req, res, next) => {
     }
 
     const campground = await Campground.findByIdAndUpdate(req.params.id, payload, {
-      new:           true,
+      returnDocument: 'after',
       runValidators: true
     });
 
@@ -194,18 +194,20 @@ exports.deleteCampground = async (req, res, next) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const hasActiveOrUpcomingBookings = await Booking.exists({
+    const activeBookings = await Booking.countDocuments({
       campground: req.params.id,
       checkOutDate: { $gte: today }
     });
 
-    if (hasActiveOrUpcomingBookings) {
+    if (activeBookings > 0) {
       return res.status(409).json({
         success: false,
-        message: 'This campground cannot be deleted while active or upcoming bookings exist.'
+        message: `Cannot delete campground with ${activeBookings} active or upcoming booking(s)`
       });
     }
 
+    // Delete only past related bookings before removing the campground
+    await Booking.deleteMany({ campground: req.params.id });
     await campground.deleteOne();
 
     res.status(200).json({ success: true, data: {} });

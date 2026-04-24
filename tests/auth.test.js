@@ -2,9 +2,12 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const express = require('express');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const jwt = require('jsonwebtoken');
 
 const auth = require('../controllers/auth');
 const User = require('../models/User');
+const Booking = require('../models/Booking');
+const Campground = require('../models/Campground');
 
 // Mock database connection
 jest.mock('../config/db', () => jest.fn());
@@ -12,12 +15,26 @@ jest.mock('../config/db', () => jest.fn());
 const app = express();
 app.use(express.json());
 
-// Mock protect middleware
+// Mock protect middleware for controller-level tests.
 const mockProtect = (req, res, next) => {
     const userId = req.headers['user-id'];
+    const authHeader = req.headers.authorization;
+
     if (userId) {
         req.user = { id: userId };
+        return next();
     }
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = { id: decoded.id };
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Not authorized' });
+        }
+    }
+
     next();
 };
 
@@ -26,6 +43,7 @@ app.post('/api/v1/auth/register', auth.register);
 app.post('/api/v1/auth/login', auth.login);
 app.get('/api/v1/auth/logout', auth.logout);
 app.get('/api/v1/auth/me', mockProtect, auth.getMe);
+app.delete('/api/v1/auth/me', mockProtect, auth.deleteMe);
 app.put('/api/v1/auth/updatedetails', mockProtect, auth.updateDetails);
 app.put('/api/v1/auth/updatepassword', mockProtect, auth.updatePassword);
 app.get('/api/v1/auth/users', auth.getUsers);
@@ -49,9 +67,13 @@ beforeAll(async () => {
 
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
+    await User.syncIndexes();
+    await Campground.syncIndexes();
 });
 
 afterEach(async () => {
+    await Booking.deleteMany({});
+    await Campground.deleteMany({});
     await User.deleteMany({});
     jest.restoreAllMocks();
     jest.clearAllMocks();
@@ -61,6 +83,8 @@ afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
 });
+
+const authHeader = (user) => `Bearer ${jwt.sign({ id: user._id }, process.env.JWT_SECRET)}`;
 
 describe('Auth Controller (100% Branch Coverage)', () => {
     // REGISTER
