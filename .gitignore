@@ -1,4 +1,9 @@
-# ignore all node modules
-node_modules/*
+# ignore dependencies
+node_modules/
+
+# ignore generated test coverage reports
+coverage/
+.nyc_output/
+
 # ignore config file
 config/config.env
