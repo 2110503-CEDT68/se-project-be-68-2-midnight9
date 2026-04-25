@@ -1,0 +1,1084 @@
+openapi: 3.0.3
+info:
+  title: Campground Booking API
+  description: |
+    REST API for Campground Booking System (Midnight9 Team)
+
+    ## Authentication
+    Use **Bearer JWT Token** in the `Authorization` header for protected routes.
+
+    ```
+    Authorization: Bearer <your_token>
+    ```
+
+    Token is obtained from `/api/v1/auth/login` or `/api/v1/auth/register`
+
+    ## Roles
+    - **user** — Regular user, can book up to 3 nights total across all campgrounds
+    - **admin** — Can manage campgrounds and view all data
+  version: 1.0.0
+  contact:
+    name: SE Project 68-2 Midnight9
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+  - url: https://se-project-be-68-2-midnight9.vercel.app/api/v1
+    description: Production (Vercel)
+
+tags:
+  - name: Auth
+    description: Authentication & User Management
+  - name: Campgrounds
+    description: Campground CRUD Operations
+  - name: Bookings
+    description: Booking Management
+
+paths:
+
+  # ── AUTH ──────────────────────────────────
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Create a new user account and receive a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+            examples:
+              user:
+                summary: Register as normal user
+                value:
+                  name: John Doe
+                  email: john@example.com
+                  password: password123
+                  tel: "0812345678"
+                  role: user
+                  birthDate: "1995-06-15"
+                  province: Chiang Mai
+                  emergencyName: Jane Doe
+                  emergencyPhone: "0898765432"
+                  medicalConditions: ""
+      responses:
+        "200":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      description: Authenticate with email and password and receive a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+            example:
+              email: john@example.com
+              password: password123
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    get:
+      tags: [Auth]
+      summary: Logout user
+      description: Clear the authentication cookie. Requires a valid token.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmpty'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current logged-in user
+      description: Retrieve the profile of the currently authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags: [Auth]
+      summary: Delete own account
+      description: Delete the current user's account. Requires password confirmation. All bookings associated with this user will also be deleted.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  example: password123
+      responses:
+        "200":
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmpty'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/updatedetails:
+    put:
+      tags: [Auth]
+      summary: Update user profile details
+      description: Update personal information (name, phone, province, etc.). Only send the fields you want to change.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDetailsInput'
+            example:
+              name: John Smith
+              province: Bangkok
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/updatepassword:
+    put:
+      tags: [Auth]
+      summary: Update password
+      description: Change the user's password. Requires the current password for verification.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  example: oldpassword123
+                newPassword:
+                  type: string
+                  minLength: 6
+                  example: newpassword456
+      responses:
+        "200":
+          description: Password updated, new token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/users:
+    get:
+      tags: [Auth]
+      summary: Get all users (Admin only)
+      description: Retrieve a list of all registered users. Restricted to **admin** role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of all users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/users/{id}:
+    delete:
+      tags: [Auth]
+      summary: Delete user by ID (Admin only)
+      description: Delete a user by their ID along with all their bookings. Restricted to **admin** role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmpty'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ── CAMPGROUNDS ───────────────────────────
+
+  /campgrounds:
+    get:
+      tags: [Campgrounds]
+      summary: Get all campgrounds
+      description: |
+        Retrieve a list of all campgrounds with support for filtering, sorting, and pagination.
+
+        **Query operators:** Use syntax `field[gt]=value` e.g. `price[lte]=500`
+      parameters:
+        - name: name
+          in: query
+          description: Search by campground name (case-insensitive)
+          schema:
+            type: string
+            example: Doi Inthanon
+        - name: province
+          in: query
+          description: Filter by province
+          schema:
+            type: string
+            example: Chiang Mai
+        - name: "price[lte]"
+          in: query
+          description: Maximum price per night (THB)
+          schema:
+            type: number
+            example: 500
+        - name: "price[gte]"
+          in: query
+          description: Minimum price per night (THB)
+          schema:
+            type: number
+            example: 200
+        - name: select
+          in: query
+          description: Comma-separated list of fields to return
+          schema:
+            type: string
+            example: "name,price,province"
+        - name: sort
+          in: query
+          description: Sort by field (prefix with - for descending)
+          schema:
+            type: string
+            example: "-price"
+        - name: page
+          in: query
+          description: Page number (default 1)
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of results per page (default 25)
+          schema:
+            type: integer
+            default: 25
+            example: 10
+      responses:
+        "200":
+          description: List of campgrounds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 3
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campground'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags: [Campgrounds]
+      summary: Create new campground (Admin only)
+      description: Add a new campground. Restricted to **admin** role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampgroundInput'
+            example:
+              name: Doi Inthanon Camp
+              price: 350
+              picture: "https://example.com/images/doi-inthanon.jpg"
+              address: "119 Moo 6, Ban Luang"
+              district: Chom Thong
+              province: Chiang Mai
+              region: Northern
+              tel: "0531234567"
+              postalcode: "50160"
+      responses:
+        "201":
+          description: Campground created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampgroundResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /campgrounds/{id}:
+    get:
+      tags: [Campgrounds]
+      summary: Get single campground
+      description: Retrieve details of a single campground by ID.
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        "200":
+          description: Campground found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampgroundResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Campgrounds]
+      summary: Update campground (Admin only)
+      description: Update campground information. Restricted to **admin** role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampgroundInput'
+            example:
+              price: 400
+              tel: "0539876543"
+      responses:
+        "200":
+          description: Campground updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampgroundResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Campgrounds]
+      summary: Delete campground (Admin only)
+      description: |
+        Delete a campground. Restricted to **admin** role.
+
+        ⚠️ **Cannot delete** if there are active or upcoming bookings for this campground.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        "200":
+          description: Campground deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmpty'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: Conflict — campground has active or upcoming bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Cannot delete campground with 2 active or upcoming booking(s)"
+
+  # ── BOOKINGS (standalone) ─────────────────
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: Get all bookings
+      description: |
+        - **admin**: Retrieve all bookings from all users
+        - **user**: Retrieve only the current user's own bookings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 2
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "500":
+          $ref: '#/components/responses/ServerError'
+
+  /bookings/{id}:
+    get:
+      tags: [Bookings]
+      summary: Get single booking
+      description: Retrieve a single booking by ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        "200":
+          description: Booking found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Bookings]
+      summary: Update booking
+      description: |
+        Update an existing booking (change check-in/out dates).
+
+        - **user**: Can only update their own bookings. Total nights must not exceed 3.
+        - **admin**: Can update any booking without night limits. Can reassign booking to another user via `userEmail`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdateInput'
+            examples:
+              changeDate:
+                summary: Change check-in/out dates
+                value:
+                  checkInDate: "2025-07-01"
+                  checkOutDate: "2025-07-03"
+              adminReassign:
+                summary: Admin reassign to another user
+                value:
+                  userEmail: other@example.com
+      responses:
+        "200":
+          description: Booking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Bookings]
+      summary: Delete booking
+      description: |
+        Delete a booking.
+
+        - **user**: Can only delete their own bookings
+        - **admin**: Can delete any booking
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        "200":
+          description: Booking deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmpty'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ── BOOKINGS (nested under campground) ───
+
+  /campgrounds/{campgroundId}/bookings:
+    get:
+      tags: [Bookings]
+      summary: Get bookings for a specific campground (Admin only)
+      description: Retrieve all bookings for a specific campground. Restricted to **admin** role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campgroundId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the campground
+          schema:
+            type: string
+            example: 6641f2e3a1b2c3d4e5f60000
+      responses:
+        "200":
+          description: Bookings for the campground
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Bookings]
+      summary: Create a booking for a campground
+      description: |
+        Book a campground.
+
+        **Rules for regular users:**
+        - Total nights booked across all campgrounds must not exceed **3 nights**
+        - Cannot book overlapping dates at the same campground
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campgroundId
+          in: path
+          required: true
+          description: MongoDB ObjectId of the campground
+          schema:
+            type: string
+            example: 6641f2e3a1b2c3d4e5f60000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingInput'
+            example:
+              checkInDate: "2025-07-10"
+              checkOutDate: "2025-07-12"
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter the JWT token obtained from login or register
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: MongoDB ObjectId
+      schema:
+        type: string
+        example: 6641f2e3a1b2c3d4e5f60001
+
+  schemas:
+
+    RegisterInput:
+      type: object
+      required: [name, email, password, tel]
+      properties:
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          minLength: 6
+          example: password123
+        tel:
+          type: string
+          pattern: '^\d{9,10}$'
+          example: "0812345678"
+        role:
+          type: string
+          enum: [user, admin]
+          default: user
+        birthDate:
+          type: string
+          format: date
+          example: "1995-06-15"
+        province:
+          type: string
+          example: Chiang Mai
+        emergencyName:
+          type: string
+          example: Jane Doe
+        emergencyPhone:
+          type: string
+          pattern: '^\d{9,10}$'
+          example: "0898765432"
+        medicalConditions:
+          type: string
+          example: ""
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          example: password123
+
+    UpdateDetailsInput:
+      type: object
+      description: Send only the fields you want to update
+      properties:
+        name:
+          type: string
+          example: John Smith
+        tel:
+          type: string
+          pattern: '^\d{9,10}$'
+          example: "0899999999"
+        email:
+          type: string
+          format: email
+          example: new@example.com
+        birthDate:
+          type: string
+          format: date
+          example: "1995-06-15"
+        province:
+          type: string
+          example: Bangkok
+        emergencyName:
+          type: string
+          example: Mary Doe
+        emergencyPhone:
+          type: string
+          pattern: '^\d{9,10}$'
+          example: "0811111111"
+        medicalConditions:
+          type: string
+          example: Peanut allergy
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 6641f2e3a1b2c3d4e5f60001
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          example: john@example.com
+        tel:
+          type: string
+          example: "0812345678"
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+        birthDate:
+          type: string
+          format: date-time
+          nullable: true
+        province:
+          type: string
+          example: Chiang Mai
+        emergencyName:
+          type: string
+          example: Jane Doe
+        emergencyPhone:
+          type: string
+          example: "0898765432"
+        medicalConditions:
+          type: string
+          example: ""
+        createdAt:
+          type: string
+          format: date-time
+
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/User'
+
+    CampgroundInput:
+      type: object
+      required: [name, price, picture, address, district, province, region, tel, postalcode]
+      properties:
+        name:
+          type: string
+          maxLength: 50
+          example: Doi Inthanon Camp
+        price:
+          type: number
+          minimum: 0
+          example: 350
+        picture:
+          type: string
+          format: uri
+          example: "https://example.com/images/camp.jpg"
+        address:
+          type: string
+          example: "119 Moo 6, Ban Luang"
+        district:
+          type: string
+          example: Chom Thong
+        province:
+          type: string
+          example: Chiang Mai
+        region:
+          type: string
+          example: Northern
+        tel:
+          type: string
+          pattern: '^\d{9,10}$'
+          example: "0531234567"
+        postalcode:
+          type: string
+          pattern: '^\d{5}$'
+          example: "50160"
+
+    Campground:
+      allOf:
+        - $ref: '#/components/schemas/CampgroundInput'
+        - type: object
+          properties:
+            _id:
+              type: string
+              example: 6641f2e3a1b2c3d4e5f60000
+            id:
+              type: string
+              example: 6641f2e3a1b2c3d4e5f60000
+            bookings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+
+    CampgroundResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Campground'
+
+    Pagination:
+      type: object
+      properties:
+        next:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 2
+            limit:
+              type: integer
+              example: 25
+        prev:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 25
+
+    BookingInput:
+      type: object
+      required: [checkInDate, checkOutDate]
+      properties:
+        checkInDate:
+          type: string
+          format: date
+          example: "2025-07-10"
+        checkOutDate:
+          type: string
+          format: date
+          example: "2025-07-12"
+
+    BookingUpdateInput:
+      type: object
+      properties:
+        checkInDate:
+          type: string
+          format: date
+          example: "2025-07-01"
+        checkOutDate:
+          type: string
+          format: date
+          example: "2025-07-03"
+        userEmail:
+          type: string
+          format: email
+          description: "(Admin only) Reassign booking to another user by email"
+          example: other@example.com
+
+    Booking:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 6641f2e3a1b2c3d4e5f60002
+        checkInDate:
+          type: string
+          format: date-time
+          example: "2025-07-10T00:00:00.000Z"
+        checkOutDate:
+          type: string
+          format: date-time
+          example: "2025-07-12T00:00:00.000Z"
+        user:
+          oneOf:
+            - type: string
+              example: 6641f2e3a1b2c3d4e5f60001
+            - type: object
+              properties:
+                _id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+        campground:
+          oneOf:
+            - type: string
+              example: 6641f2e3a1b2c3d4e5f60000
+            - type: object
+              properties:
+                _id:
+                  type: string
+                name:
+                  type: string
+                address:
+                  type: string
+                tel:
+                  type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    BookingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Booking'
+
+    SuccessEmpty:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          example: {}
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error message here
+
+  responses:
+    BadRequest:
+      description: Bad Request — Invalid data provided
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Please provide a valid value
+
+    Unauthorized:
+      description: Unauthorized — Not logged in or token has expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Not authorized to access this route
+
+    Forbidden:
+      description: Forbidden — Insufficient role permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "User role user is not authorized to access this route"
+
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Resource not found
+
+    ServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Server Error

@@ -39,7 +39,8 @@ app.set('trust proxy', 1);
 
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 100
+  max: 100,
+  skip: (req) => req.path.startsWith('/api-docs')
 });
 app.use(limiter);
 
@@ -53,5 +54,12 @@ app.get('/', (req, res) => {
 app.use('/api/v1/campgrounds', campgrounds);
 app.use('/api/v1/auth', auth);
 app.use('/api/v1/bookings', bookings);
+
+// ── Swagger UI (เพิ่มต่อท้าย — ไม่แก้โค้ดเดิม) ──────────────────────────
+// ติดตั้ง dependency ก่อน: npm install swagger-ui-express yamljs
+// เข้าใช้งาน: http://localhost:5000/api-docs
+const mountSwagger = require('./swagger');
+mountSwagger(app);
+// ─────────────────────────────────────────────────────────────────────────
 
 module.exports = app;
