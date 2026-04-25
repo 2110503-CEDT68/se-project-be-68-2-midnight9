@@ -32,7 +32,9 @@ jest.mock('../models/Campground', () => ({
 }));
 jest.mock('../models/Booking', () => ({
   deleteMany: jest.fn(),
-  countDocuments: jest.fn()
+  countDocuments: jest.fn(),
+  find: jest.fn(),
+  findById: jest.fn()
 }));
 
 const request = require('supertest');
@@ -134,5 +136,15 @@ describe('Sprint backlog route flows', () => {
       success: false,
       message: 'Cannot delete campground with 2 active or upcoming booking(s)'
     });
+  });
+
+  test('does not expose undocumented nested booking item routes', async () => {
+    const res = await request(app)
+      .get('/api/v1/campgrounds/camp-1/bookings/booking-1')
+      .set('x-user-id', 'admin-1')
+      .set('x-user-role', 'admin');
+
+    expect(res.statusCode).toBe(404);
+    expect(Booking.findById).not.toHaveBeenCalled();
   });
 });

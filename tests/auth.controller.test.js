@@ -140,7 +140,7 @@ describe('auth controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        msg: 'Please provide an email and password'
+        message: 'Please provide an email and password'
       });
     });
 
@@ -157,7 +157,7 @@ describe('auth controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        msg: 'Invalid credentials'
+        message: 'Invalid credentials'
       });
     });
 
@@ -177,7 +177,7 @@ describe('auth controller', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        msg: 'Invalid credentials'
+        message: 'Invalid credentials'
       });
     });
 

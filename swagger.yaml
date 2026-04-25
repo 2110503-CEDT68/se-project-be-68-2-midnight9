@@ -161,6 +161,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
   /auth/updatedetails:
     put:
@@ -189,6 +193,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
   /auth/updatepassword:
     put:
@@ -253,6 +259,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
   /auth/users/{id}:
     delete:
@@ -276,6 +284,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
   # ── CAMPGROUNDS ───────────────────────────
 
@@ -519,7 +529,11 @@ paths:
     get:
       tags: [Bookings]
       summary: Get single booking
-      description: Retrieve a single booking by ID.
+      description: |
+        Retrieve a single booking by ID.
+
+        - **user**: Can only view their own bookings
+        - **admin**: Can view any booking
       security:
         - bearerAuth: []
       parameters:
@@ -535,6 +549,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
     put:
       tags: [Bookings]
@@ -575,8 +591,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
     delete:
       tags: [Bookings]
@@ -599,8 +619,12 @@ paths:
                 $ref: '#/components/schemas/SuccessEmpty'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
   # ── BOOKINGS (nested under campground) ───
 
@@ -637,6 +661,10 @@ paths:
                       $ref: '#/components/schemas/Booking'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
     post:
       tags: [Bookings]
@@ -677,8 +705,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/ServerError'
 
 components:
 
@@ -728,6 +760,12 @@ components:
           type: string
           format: date
           example: "1995-06-15"
+        birthdate:
+          type: string
+          format: date
+          deprecated: true
+          description: Alias accepted by the API; prefer `birthDate`.
+          example: "1995-06-15"
         province:
           type: string
           example: Chiang Mai
@@ -772,6 +810,12 @@ components:
         birthDate:
           type: string
           format: date
+          example: "1995-06-15"
+        birthdate:
+          type: string
+          format: date
+          deprecated: true
+          description: Alias accepted by the API; prefer `birthDate`.
           example: "1995-06-15"
         province:
           type: string

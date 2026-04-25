@@ -91,6 +91,23 @@ describe('bookings controller', () => {
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
+    test('returns 403 when non-admin requests bookings for a campground', async () => {
+      const req = {
+        user: { id: 'user-1', role: 'user' },
+        params: { campgroundId: 'camp-1' }
+      };
+      const res = createResponse();
+
+      await bookingsController.getBookings(req, res);
+
+      expect(Booking.find).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'User role user is not authorized to access this route'
+      });
+    });
+
     test('returns all bookings when admin does not pass campgroundId', async () => {
       const data = [{ _id: 'bk-3' }, { _id: 'bk-4' }];
       const queryChain = createQueryChain(data);
@@ -131,11 +148,14 @@ describe('bookings controller', () => {
 
   describe('getBooking', () => {
     test('returns a single booking when found', async () => {
-      const booking = { _id: 'bk-1' };
+      const booking = { _id: 'bk-1', user: { _id: { toString: () => 'user-1' } } };
       const queryChain = createQueryChain(booking);
       Booking.findById.mockReturnValue(queryChain);
 
-      const req = { params: { id: 'bk-1' } };
+      const req = {
+        params: { id: 'bk-1' },
+        user: { id: 'user-1', role: 'user' }
+      };
       const res = createResponse();
 
       await bookingsController.getBooking(req, res);
@@ -161,12 +181,55 @@ describe('bookings controller', () => {
       });
     });
 
+    test('returns 401 when non-owner tries to view a booking', async () => {
+      const booking = { _id: 'bk-1', user: { toString: () => 'owner-1' } };
+      const queryChain = createQueryChain(booking);
+      Booking.findById.mockReturnValue(queryChain);
+
+      const req = {
+        params: { id: 'bk-1' },
+        user: { id: 'user-1', role: 'user' }
+      };
+      const res = createResponse();
+
+      await bookingsController.getBooking(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'User user-1 is not authorized to view this booking'
+      });
+    });
+
+    test('returns 401 when booking has no user reference', async () => {
+      const booking = { _id: 'bk-1' };
+      const queryChain = createQueryChain(booking);
+      Booking.findById.mockReturnValue(queryChain);
+
+      const req = {
+        params: { id: 'bk-1' },
+        user: { id: 'user-1', role: 'user' }
+      };
+      const res = createResponse();
+
+      await bookingsController.getBooking(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'User user-1 is not authorized to view this booking'
+      });
+    });
+
     test('returns 500 when booking lookup fails', async () => {
       Booking.findById.mockImplementation(() => {
         throw new Error('lookup failed');
       });
 
-      const req = { params: { id: 'bk-1' } };
+      const req = {
+        params: { id: 'bk-1' },
+        user: { id: 'user-1', role: 'user' }
+      };
       const res = createResponse();
 
       await bookingsController.getBooking(req, res);

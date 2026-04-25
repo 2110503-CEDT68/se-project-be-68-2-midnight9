@@ -9,6 +9,12 @@ const calcNights = (checkIn, checkOut) => {
   return Math.round((new Date(checkOut) - new Date(checkIn)) / msPerDay);
 };
 
+const getBookingUserId = (booking) => {
+  if (!booking || !booking.user) return '';
+  if (booking.user._id) return booking.user._id.toString();
+  return booking.user.toString();
+};
+
 // @desc    Get all bookings
 // @route   GET /api/v1/bookings
 // @route   GET /api/v1/campgrounds/:campgroundId/bookings
@@ -16,6 +22,13 @@ const calcNights = (checkIn, checkOut) => {
 exports.getBookings = async (req, res, next) => {
   await connectDB();
   let query;
+
+  if (req.params.campgroundId && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: `User role ${req.user.role} is not authorized to access this route`
+    });
+  }
 
   // General users can see only their own bookings
   if (req.user.role !== 'admin') {
@@ -75,6 +88,10 @@ exports.getBooking = async (req, res, next) => {
 
     if (!booking) {
       return res.status(404).json({ success: false, message: `No booking with the id of ${req.params.id}` });
+    }
+
+    if (getBookingUserId(booking) !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: `User ${req.user.id} is not authorized to view this booking` });
     }
 
     res.status(200).json({ success: true, data: booking });

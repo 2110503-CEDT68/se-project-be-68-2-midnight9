@@ -6,15 +6,17 @@ const {
   updateCampground,
   deleteCampground
 } = require('../controllers/campgrounds');
-
-// Include booking router for nested route
-const bookingRouter = require('./bookings');
+const {
+  getBookings,
+  addBooking
+} = require('../controllers/bookings');
 
 const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
-// Re-route into booking router
-router.use('/:campgroundId/bookings', bookingRouter);
+router.route('/:campgroundId/bookings')
+  .get(protect, getBookings)
+  .post(protect, authorize('admin', 'user'), addBooking);
 
 router.route('/')
   .get(getCampgrounds)
