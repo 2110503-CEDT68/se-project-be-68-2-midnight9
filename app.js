@@ -7,7 +7,6 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const cors = require('cors');
 
-// โหลด env จาก local ตอน dev; บน Vercel จะอ่านจาก Project Environment Variables เอง
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: './config/config.env' });
 }
@@ -19,6 +18,7 @@ const auth = require('./routes/auth');
 const bookings = require('./routes/bookings');
 
 const app = express();
+const isPlaywrightRun = process.env.PLAYWRIGHT_TEST === '1';
 
 app.set('query parser', 'extended');
 
@@ -39,7 +39,7 @@ app.set('trust proxy', 1);
 
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 100,
+  max: isPlaywrightRun ? 10000 : 100,
   skip: (req) => req.path.startsWith('/api-docs')
 });
 app.use(limiter);
@@ -55,9 +55,9 @@ app.use('/api/v1/campgrounds', campgrounds);
 app.use('/api/v1/auth', auth);
 app.use('/api/v1/bookings', bookings);
 
-// ── Swagger UI (เพิ่มต่อท้าย — ไม่แก้โค้ดเดิม) ──────────────────────────
-// ติดตั้ง dependency ก่อน: npm install swagger-ui-express yamljs
-// เข้าใช้งาน: http://localhost:5000/api-docs
+// ── Swagger UI ──────────────────────────
+// npm install swagger-ui-express yamljs
+// access : http://localhost:5000/api-docs
 const mountSwagger = require('./swagger');
 mountSwagger(app);
 // ─────────────────────────────────────────────────────────────────────────
